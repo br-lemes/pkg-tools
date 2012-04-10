@@ -1,0 +1,81 @@
+#!/bin/sh
+
+VERSION=1
+
+PKGBLACKLIST="acpid bridge etc hdparm hdtools iwtools language\
+ mail modules root ssh_keys webadmin"
+
+all=0
+
+usage() {
+cat << EOF
+Usage: $(basename $0) [OPTION] [PACKAGE]
+
+List installed packages or list files from a package
+
+Options:
+  -a, --all      List all packages (ignore blacklist)
+  -h, --help     Show this help and exit
+  -v, --version  Show version and exit
+
+breno@br-lemes.net
+http://www.br-lemes.net/
+EOF
+exit 0
+}
+
+version() {
+  echo "$(basename $0) version $VERSION"
+  exit 0
+}
+
+abort() {
+  echo "$(basename $0) error: $1" >&2
+  exit 1
+}
+
+in_list() {
+  local search="$1"
+  shift
+  for item in $*; do
+    [ "$item" == "$search" ] && return 0
+  done
+  return 1
+}
+
+pkglist() {
+  local list=""
+  for pkg in $(cat /var/lib/lrpkg/packages); do
+    if [ $all == 1 ]; then
+      [ $pkg != "root" ] && list="$list $pkg" # never list root
+    else
+      ! in_list $pkg $PKGBLACKLIST && list="$list $pkg"
+    fi
+  done
+  echo $list | tr " " "\n"
+}
+
+pkgfiles() {
+  local found=0
+  ! in_list $1 $(pkglist) && abort "package $1 not found"
+  for line in $(cat /var/lib/lrpkg/$1.list); do
+    local files=$(find $line 2> /dev/null)
+    if [ -n "$files" ]; then
+      ls -d -1 $files
+      found=1
+    fi
+  done
+  [ $found == 0 ] && abort "no file found in package $1"
+}
+
+case $1 in
+  -a|--all)     all=1; shift;;
+  -v|--version) version;;
+  -h|--help)    usage;;
+esac
+
+case $# in
+  0) pkglist;;
+  1) pkgfiles $1;;
+  *) abort "invalid arguments $*";;
+esac

@@ -1,0 +1,63 @@
+#!/bin/sh
+
+VERSION=1
+
+all=""
+
+usage() {
+cat << EOF
+Usage: $(basename $0) [OPTION] FILE
+
+Find which package contains a file
+
+Options:
+  -a, --all      List all packages (ignore blacklist)
+  -h, --help     Show this help and exit
+  -v, --version  Show version and exit
+
+breno@br-lemes.net
+http://www.br-lemes.net/
+EOF
+exit 0
+}
+
+version() {
+  echo "$(basename $0) version $VERSION"
+  exit 0
+}
+
+abort() {
+  echo "$(basename $0) error: $1" >&2
+  exit 1
+}
+
+pkgfind() {
+  local found=0
+  local D=$(dirname "$1")
+  local B=$(basename "$1")
+  local F="$(cd "$D" 2>/dev/null && pwd || echo "$D")/$B"
+  [ ! -e $F ] && abort "file $F not found"
+  for pkg in $(pkg-list $all); do
+    for file in $(pkg-list $all $pkg); do
+      if [ $file == $F ]; then
+        echo $pkg
+        found=1
+      fi
+    done
+  done
+  [ $found == 0 ] && abort "package containing $F not found"
+}
+
+! $(pkg-list -v > /dev/null 2> /dev/null) && abort "pkg-list not found"
+
+case $1 in
+  -a|--all)     all="-a"; shift;;
+  -v|--version) version;;
+  -h|--help)    usage;;
+esac
+
+case $# in
+  0) abort "no file";;
+  1) pkgfind $1;;
+  *) abort "invalid arguments $*";;
+esac
