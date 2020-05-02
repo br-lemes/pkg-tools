@@ -1,0 +1,51 @@
+#!/bin/sh
+
+################################################################################
+# pkg-help
+
+pkghelp() {
+	echo "este é o help"
+}
+
+################################################################################
+# pkg-list
+
+pkglist() {
+	echo "Ainda não fiz"
+}
+
+################################################################################
+# pkg-find
+
+pkgfind() {
+	echo "Ainda não fiz"
+}
+
+pkg_abort() {
+	echo $*
+	exit 1
+}
+
+pkg_run() {
+	tool="pkg${1#pkg}"
+	if type $tool > /dev/null 2>&1; then
+		shift
+		$tool "$@"
+	else
+		pkg_abort "Tool 'pkg-${tool#pkg}' not found (try 'pkg-help')"
+	fi
+}
+
+pkg_check() {
+	[ ! -f /var/lib/lrpkg/packages ] &&
+		pkg_abort "No Linux Router Package system found"
+}
+
+pkg_check
+
+n="$(basename "$0")"
+if [ "pkg-${n#pkg-}" = "$n" ]; then
+	pkg_run "pkg${n#pkg-}" "$@"
+else
+	[ "$1" ] && pkg_run "$@"
+fi
